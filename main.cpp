@@ -6,6 +6,34 @@
 
 using namespace std;
 
+class Entity {
+    public:
+        int id;
+        float size;
+
+        // Class constructor
+        Entity(int id, float size) {
+            this->id = id;
+            this->size = size;
+        }
+};
+
+class Room {
+    public:
+        int id;
+        int floor;
+        float capacity;
+        vector<int> adjList;
+
+        // Class constructor
+        Room(int id, int floor, float capacity, int size) {
+            this->id = id;
+            this->floor = floor;
+            this->capacity = capacity;
+            adjList.resize(size);
+        }
+};
+
 int getFromHeader(istream& file)
 {
     string dispose;
@@ -16,25 +44,45 @@ int getFromHeader(istream& file)
     istringstream lineStream(line);
     lineStream >> dispose >> n;
     return n;
-} 
+}
 
-vector<int> readEntities(istream& file, int n)
+vector<Entity> readEntities(istream& file, int nEntities)
 {
-    vector<int> entitiesSize;
+    int id;
+    float size;
     string line;
     string dispose;
-    int capacity;
+    vector<Entity> entityVector;
 
-    // Assign space to vector array
-    entitiesSize.resize(n);
-    for (int i = 0; i < n; i++) {
+    entityVector.reserve(nEntities);
+
+    getline(file, line);
+    getline(file, line);
+
+    for (int i = 0; i < nEntities; i++) {
         getline(file, line);
         istringstream lineStream(line);
-        lineStream >> dispose >> dispose >> capacity;
-        entitiesSize[i] = capacity;
+
+        lineStream >> id >> dispose >> size;
+        entityVector.push_back(Entity(id, size));
     }
-    return entitiesSize;
+    return entityVector;
 }
+
+vector<Room> readRooms(istream& file, int nRooms) {
+    int id;
+    int floor;
+    float capacity;
+    string line;
+
+    getline(file, line);
+    getline(file, line);
+
+    
+
+
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -47,7 +95,10 @@ int main(int argc, char *argv[])
     int nConstraints;
     int nHardConstraints;
     int nSoftConstraints;
-    vector<int> entitiesSize;
+    vector<int> entities;
+    vector<Entity> entitiesVector;
+
+    vector<vector<int>> adjacencyVector;
 
     string path = "./instances/" + (string) argv[1] + ".txt";
     file.open(path);
@@ -70,8 +121,9 @@ int main(int argc, char *argv[])
     // Get number of soft constraints
     nSoftConstraints = getFromHeader(file);
 
-    entitiesSize = readEntities(file, nEntities);
-
+    entitiesVector = readEntities(file, nEntities);
+    cout << entitiesVector[54].size << '\n';
+    
     file.close();
     return 0;
 }

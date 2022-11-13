@@ -1,0 +1,8 @@
+README:
+	- Para crear ejecutable ejecutar en terminal de Linux "make main"
+	- Para ejecutar el programa ejecutar en terminal de Linux "./main nombreinstancia"
+	EJ: "./main nott1b"
+Por realizar:
+	- Terminar de leer instancia
+	- Implementar algoritmo greedy
+	- Implementar algoritmo hill-climbing
