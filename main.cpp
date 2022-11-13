@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <memory>
 
 using namespace std;
 
@@ -24,13 +25,18 @@ class Room {
         int floor;
         float capacity;
         vector<int> adjList;
+        shared_ptr<vector<vector<int>>> roomsInFloor;
 
         // Class constructor
-        Room(int id, int floor, float capacity, int size) {
+        Room(int id, int floor, float capacity, vector<int> adjList) {
             this->id = id;
             this->floor = floor;
             this->capacity = capacity;
-            adjList.resize(size);
+            this->adjList = adjList;
+        }
+
+        void setRoomsInFloor(shared_ptr<vector<vector<int>>> roomsInFloor) {
+            this->roomsInFloor = roomsInFloor;
         }
 };
 
@@ -69,18 +75,41 @@ vector<Entity> readEntities(istream& file, int nEntities)
     return entityVector;
 }
 
-vector<Room> readRooms(istream& file, int nRooms) {
+vector<Room> readRooms(istream& file, int nRooms, int nFloors) {
     int id;
     int floor;
     float capacity;
+    int nAdj;
+    int idAdj;
     string line;
+    vector<Room> roomsVector;
+    vector<int> adjList;
+    shared_ptr<vector<vector<int>>> roomsInFloor = make_shared<vector<vector<int>>>();
+
+    roomsVector.reserve(nRooms);
+    (*roomsInFloor).resize(nFloors);
 
     getline(file, line);
     getline(file, line);
 
-    
+    for (int i = 0; i < nRooms; i++) {
+        getline(file, line);
+        istringstream lineStream(line);
 
-
+        lineStream >> id >> floor >> capacity >> nAdj;
+        adjList.reserve(nAdj);
+        for (int j = 0; j < nAdj; j++) {
+            lineStream >> idAdj;
+            adjList.push_back(idAdj);
+        }
+        roomsVector.push_back(Room(id, floor, capacity, adjList));
+        adjList.clear();
+        (*roomsInFloor)[floor].push_back(id);
+    }
+    for (int i = 0; i < roomsVector.size(); i++) {
+        roomsVector[i].setRoomsInFloor(roomsInFloor);
+    }
+    return roomsVector;
 }
 
 
@@ -97,6 +126,7 @@ int main(int argc, char *argv[])
     int nSoftConstraints;
     vector<int> entities;
     vector<Entity> entitiesVector;
+    vector<Room> roomsVector;
 
     vector<vector<int>> adjacencyVector;
 
@@ -122,8 +152,31 @@ int main(int argc, char *argv[])
     nSoftConstraints = getFromHeader(file);
 
     entitiesVector = readEntities(file, nEntities);
-    cout << entitiesVector[54].size << '\n';
+
+    roomsVector = readRooms(file, nRooms, nFloors);
     
+    /*
+    Check if adjList are created correctly
+
+    for (int i = 0; i < roomsVector[0].adjList.size(); i++) {
+        cout << roomsVector[0].adjList[i] << '\n';
+    }
+
+    for (int i = 0; i < roomsVector[nRooms - 1].adjList.size(); i++) {
+        cout << roomsVector[nRooms - 1].adjList[i] << '\n';
+    }
+    */
+    /*
+    printf("%p\n", (void *) &(*(roomsVector[0].roomsInFloor)));
+    printf("%p\n", (void *) &(*(roomsVector[nRooms - 1].roomsInFloor)));
+    for (int i = 0; i < (*(roomsVector[nRooms - 1]).roomsInFloor).size(); i++) {
+        cout << "FLOOR " << i << '\n';
+        for (int j = 0; j < (*(roomsVector[nRooms - 1]).roomsInFloor)[0].size(); j++) {
+            cout << ((*(roomsVector[nRooms - 1]).roomsInFloor)[0])[j] << '\n';
+        }
+    }
+    */
+
     file.close();
     return 0;
 }
