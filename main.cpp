@@ -52,6 +52,10 @@ class Constraint {
             this->constraintType = constraintType;
             this->parametersIds = parametersIds;
         }
+
+        int checkContraint(vector<int> solution) {
+
+        }
 };
 
 class OSAPInstance {
@@ -149,6 +153,10 @@ class OSAPInstance {
             return 0;
         }
 
+        float calcObj() {
+            
+        }
+
         void solveGreedy()
         {
             vector <int> unassignedRoomsIds;
@@ -162,7 +170,6 @@ class OSAPInstance {
             }
 
         }
-        
     private:
         int readFromHeader(istream& file)
         {
