@@ -6,6 +6,9 @@ int main(int argc, char *argv[])
     string path = "./instances/" + (string) argv[1] + ".txt";
 
     problemInstance.init(path);
-    problemInstance.solveGreedy();
+    vector<int> greedySolution = problemInstance.solveGreedy();
+    for (int i = 0; i < greedySolution.size(); i++) {
+        cout << greedySolution[i] << '\n';
+    }
     return 0;
 }

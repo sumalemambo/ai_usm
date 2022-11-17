@@ -100,7 +100,7 @@ class OSAPInstance {
             return 0.01;
         }
 
-        void solveGreedy()
+        vector<int> solveGreedy()
         {
             vector <int> unassignedRoomsIds;
             vector<int> partialSolution;
@@ -120,27 +120,40 @@ class OSAPInstance {
             int i = 0;
             while (true) {
                 int bestRoom = -1;
-                float bestRoomPenalization;
+                float bestRoomPenalization = -1;
                 if (i == partialSolution.size()) {
                     break;
                 }
                 for (int j = 0; j < (int) unassignedRoomsIds.size(); j++) {
                     int room = unassignedRoomsIds[j];
 
-                    if (find(visitedRooms[i].begin(), visitedRooms[i].end(), j) != visitedRooms[i].end()) {
-
+                    if (find(visitedRooms[i].begin(), visitedRooms[i].end(), j) == visitedRooms[i].end()) {
+                        visitedRooms[i].push_back(room);
+                        partialSolution[i] = room;
+                        
+                        if (checkHardConstraints(partialSolution) == 0) {
+                            partialSolution[i] = -1;
+                        }
+                        else {
+                            if (bestRoomPenalization >= objectiveFunction(entitiesVector[i], roomsVector[j])  || bestRoomPenalization == -1) {
+                                bestRoom = room;
+                                bestRoomPenalization = objectiveFunction(entitiesVector[i], roomsVector[j]);
+                            }
+                        }
                     }
+                }
+                if (bestRoom != -1) {
+                    partialSolution[i] = bestRoom;
                 }
                 i++;
             }
-            
-
-
-            cout << (partialSolution.capacity() == entitiesVector.size()) << '\n';
-
-
+            return partialSolution;
         }
     private:
+        float objectiveFunction(Entity e, Room r) {
+            return max(r.capacity - e.size, 2 * (e.size - r.capacity));
+        }
+
         int checkHardConstraints(vector<int> solution) {
             for (auto constraint : hardConstraints) {
                 if (constraint.checkConstraint(solution) == 0) {

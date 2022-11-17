@@ -46,6 +46,32 @@ class Constraint {
                     return 0;
                 }
             }
+            else if (constraintType == NONALLOCATION_CONSTRAINT) {
+                if (solution[parametersIds[0] == -1]) {
+                    return -1;
+                }
+                else if (solution[parametersIds[0]] != parametersIds[1]) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            }
+            else if (constraintType == SAMEROOM_CONSTRAINT) {
+
+                // Check if both entities are asigned to rooms
+                if (solution[parametersIds[0]] == -1 || solution[parametersIds[1]] == -1) {
+                    return -1;
+                }
+
+                // If both entities are allocated in the same room the constraint is satisfied
+                else if (solution[parametersIds[0]] == solution[parametersIds[1]]) {
+                    return 1;
+                }
+                else{
+                    return 0;
+                }
+            }
             else {
                 return 1;
             }
