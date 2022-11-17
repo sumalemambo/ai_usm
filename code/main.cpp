@@ -40,8 +40,20 @@ class Room {
         }
 };
 
+// Represents constraints of the optimization problem
 class Constraint {
     public:
+        static const int ALLOCATION_CONSTRAINT = 0;
+        static const int NONALLOCATION_CONSTRAINT = 1;
+        static const int ONEOF_CONSTRAINT = 2;
+        static const int CAPACITY_CONSTRAINT = 3;
+        static const int SAMEROOM_CONSTRAINT = 4;
+        static const int NOTSAMEROOM_CONSTRAINT = 5;
+        static const int NOTSHARING_CONSTRAINT = 6;
+        static const int ADJACENCY_CONSTRAINT = 7;
+        static const int NEARBY_CONSTRAINT = 8;
+        static const int AWAYFROM_CONSTRAINT = 9;
+
         int id;
         int constraintType;
         vector<int> parametersIds;
@@ -53,26 +65,34 @@ class Constraint {
             this->parametersIds = parametersIds;
         }
 
-        int checkContraint(vector<int> solution) {
+        int checkConstraint(vector<int> solution) {
 
+            // Handle the different types of contraints
+            if (constraintType == ALLOCATION_CONSTRAINT) {
+
+                // Check if entity is assigned in the solution
+                if (solution[parametersIds[0]] == -1) {
+
+                    // Entity is not assigned in the current solution
+                    return -1;
+                }
+                else if (solution[parametersIds[0]] == parametersIds[1]) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            }
         }
+
 };
 
 class OSAPInstance {
     public:
-        const int SOFT_CONSTRAINT = 0;
-        const int HARD_CONSTRAINT = 1;
+        static const int SOFT_CONSTRAINT = 0;
+        static const int HARD_CONSTRAINT = 1;
 
-        const int ALLOCATION_CONSTRAINT = 0;
-        const int NONALLOCATION_CONSTRAINT = 1;
-        const int ONEOF_CONSTRAINT = 2;
-        const int CAPACITY_CONSTRAINT = 3;
-        const int SAMEROOM_CONSTRAINT = 4;
-        const int NOTSAMEROOM_CONSTRAINT = 5;
-        const int NOTSHARING_CONSTRAINT = 6;
-        const int ADJACENCY_CONSTRAINT = 7;
-        const int NEARBY_CONSTRAINT = 8;
-        const int AWAYFROM_CONSTRAINT = 9;
+        static const int UNASSIGNED_ENTITY = -1;
 
         vector<Entity> entitiesVector;
         vector<Room> roomsVector;
@@ -154,20 +174,27 @@ class OSAPInstance {
         }
 
         float calcObj() {
-            
+            return 0.01;
         }
 
         void solveGreedy()
         {
             vector <int> unassignedRoomsIds;
-            vector<int> solution;
-            solution.resize(entitiesVector.size());
+            vector<int> partialSolution;
+            partialSolution.reserve(entitiesVector.size());
 
             unassignedRoomsIds.resize(roomsVector.size());
 
             for (int i = 0; i < (int) roomsVector.size(); i++) {
                 unassignedRoomsIds[i] = roomsVector[i].id;
             }
+            for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                partialSolution.push_back(UNASSIGNED_ENTITY);
+            }
+
+
+            cout << (partialSolution.capacity() == entitiesVector.size()) << '\n';
+
 
         }
     private:
