@@ -6,12 +6,12 @@
 #include <algorithm>
 
 #include "entity.cpp"
-#include "room.cpp"
 #include "constraint.cpp"
 #include "constants.h"
 
 using namespace std;
 
+// Represents a whole instance of OSAP
 class OSAPInstance {
     public:
         static const int SOFT_CONSTRAINT = 0;
@@ -102,61 +102,62 @@ class OSAPInstance {
 
         vector<int> solveGreedy()
         {
-            vector <int> unassignedRoomsIds;
             vector<int> partialSolution;
             vector<vector<int>> visitedRooms;
 
             partialSolution.reserve(entitiesVector.size());
-            unassignedRoomsIds.resize(roomsVector.size());
             visitedRooms.resize(roomsVector.size());
 
-            for (int i = 0; i < (int) roomsVector.size(); i++) {
-                unassignedRoomsIds[i] = roomsVector[i].id;
-            }
             for (int i = 0; i < (int) entitiesVector.size(); i++) {
                 partialSolution.push_back(UNASSIGNED_ENTITY);
             }
-            
+            int total = 0;
             int i = 0;
             while (true) {
-                int bestRoom = -1;
-                float bestRoomPenalization = -1;
-                if (i == partialSolution.size()) {
+                int optimalRoom = -1;
+                float optimalRoomPenalization = -1;
+
+                if ((i == partialSolution.size()) || (i == -1)) {
                     break;
                 }
-                for (int j = 0; j < (int) unassignedRoomsIds.size(); j++) {
-                    int room = unassignedRoomsIds[j];
-
+                for (int j = 0; j < (int) roomsVector.size(); j++) {
                     if (find(visitedRooms[i].begin(), visitedRooms[i].end(), j) == visitedRooms[i].end()) {
-                        visitedRooms[i].push_back(room);
-                        partialSolution[i] = room;
+                        visitedRooms[i].push_back(j);
+                        partialSolution[i] = roomsVector[j].id;
                         
                         if (checkHardConstraints(partialSolution) == 0) {
                             partialSolution[i] = -1;
                         }
                         else {
-                            if (bestRoomPenalization >= objectiveFunction(entitiesVector[i], roomsVector[j])  || bestRoomPenalization == -1) {
-                                bestRoom = room;
-                                bestRoomPenalization = objectiveFunction(entitiesVector[i], roomsVector[j]);
+                            if (optimalRoomPenalization > objectiveFunction(entitiesVector[i], roomsVector[j])  || optimalRoom == -1) {
+                                optimalRoom = j;
+                                optimalRoomPenalization = objectiveFunction(entitiesVector[i], roomsVector[j]);
                             }
                         }
                     }
                 }
-                if (bestRoom != -1) {
-                    partialSolution[i] = bestRoom;
+                if (optimalRoom != -1) {
+                    total += objectiveFunction(entitiesVector[i], roomsVector[optimalRoom]);
+                    partialSolution[i] = roomsVector[optimalRoom].id;
+                    roomsVector[optimalRoom].capacity -= entitiesVector[i].size;
+                    i++;
                 }
-                i++;
+                else{
+                    i--;
+                    partialSolution[i] = -1;
+                }
             }
             return partialSolution;
         }
     private:
+
         float objectiveFunction(Entity e, Room r) {
             return max(r.capacity - e.size, 2 * (e.size - r.capacity));
         }
 
         int checkHardConstraints(vector<int> solution) {
             for (auto constraint : hardConstraints) {
-                if (constraint.checkConstraint(solution) == 0) {
+                if (constraint.checkConstraint(solution,roomsVector) == 0) {
                     return 0;
                 }
             }

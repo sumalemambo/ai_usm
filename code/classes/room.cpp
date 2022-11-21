@@ -3,6 +3,7 @@
 
 using namespace std;
 
+// Represents the rooms to which the entities will be assigned
 class Room {
     public:
         int id;

@@ -1,4 +1,5 @@
 #include <vector>
+#include "room.cpp"
 #include "constants.h"
 
 using namespace std;
@@ -28,7 +29,8 @@ class Constraint {
             this->parametersIds = parametersIds;
         }
 
-        int checkConstraint(vector<int> solution) {
+        // 
+        int checkConstraint(vector<int> solution, vector<Room> &roomsVector) {
 
             // Handle the different types of contraints
             if (constraintType == ALLOCATION_CONSTRAINT) {
@@ -57,9 +59,23 @@ class Constraint {
                     return 0;
                 }
             }
+            else if (constraintType == CAPACITY_CONSTRAINT) {
+                for (auto room : roomsVector) {
+                    if (room.id == parametersIds[0]) {
+
+                        // If room is not overused the constraint is satisfied
+                        if (room.capacity > 0) {
+                            return 1;
+                        }
+                        else {
+                            return 0;
+                        }
+                    }
+                }
+            }
             else if (constraintType == SAMEROOM_CONSTRAINT) {
 
-                // Check if both entities are asigned to rooms
+                // Check if both entities are assigned to rooms
                 if (solution[parametersIds[0]] == -1 || solution[parametersIds[1]] == -1) {
                     return -1;
                 }
@@ -72,9 +88,122 @@ class Constraint {
                     return 0;
                 }
             }
+            else if (constraintType == NOTSAMEROOM_CONSTRAINT) {
+
+                // Check if both entities are assigned to a room in the solution
+                if (solution[parametersIds[0]] == -1 || solution[parametersIds[1]] == -1) {
+                    return -1;
+                }
+
+                // If both entities are allocated in differents room the constraint is satisfied
+                else if (solution[parametersIds[0]] != solution[parametersIds[1]]) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            }
+            else if (constraintType == NOTSHARING_CONSTRAINT) {
+
+                // Check if entity is assigned to a room in the current solution
+                if (solution[parametersIds[0]] == -1) {
+                    return -1;
+                }
+                else {
+                    for (int i = 0; i < (int) solution.size(); i++) {
+
+                        // Dont compare the entity with itself
+                        if (i != parametersIds[0]) {
+
+                            // Check that entity with i id is not assigned to the same room
+                            if (solution[i] == solution[parametersIds[0]]) {
+                                return 0;
+                            }
+                        }
+                    }
+                    return 1;
+                }
+            }
+            else if (constraintType == ADJACENCY_CONSTRAINT) {
+
+                // Check that both entities are assigned in the current solution
+                if (solution[parametersIds[0]] == -1 || solution[parametersIds[1] == -1]) {
+                    return -1;
+                }
+                else {
+                    for (int i = 0; i < (int) roomsVector.size(); i++) {
+                        if (roomsVector[i].id == solution[parametersIds[0]]) {
+
+                            // Get the room associated with entity 1
+                            Room roomEntity = roomsVector[i];
+
+                            // Iterate over the adjacency list of the entity 1 room
+                            // to find out if the entity 2 room is adjacent
+                            for (int j = 0; j < roomEntity.adjList.size(); j++) {
+
+                                // Check if entity 2 room is adjacent to entity 1 room
+                                if (solution[parametersIds[1]] == roomEntity.adjList[j]) {
+                                    return 1;
+                                }
+                            }
+                            i = roomsVector.size();
+                        }
+                    }
+                    return 0;
+                }
+            }
+            else if (constraintType == NEARBY_CONSTRAINT) {
+
+                // Check if both entities are assigned to a room in the current solution
+                if (solution[parametersIds[0]] == -1 || solution[parametersIds[1]] == -1) {
+                    return -1;
+                }
+                else {
+                    // Get the rooms associated with each entity
+                    for (int i = 0; i < (int) roomsVector.size(); i++) {
+                        if (roomsVector[i].id == solution[parametersIds[0]]) {
+                            i = (int) roomsVector.size();
+
+                            for (int j = 0; j < (int) roomsVector.size(); j++) {
+                                if (roomsVector[j].id == solution[parametersIds[1]]) {
+                                    j = i;
+
+                                    // Two rooms are said to be nearby if they are on the same floor
+                                    if (roomsVector[i].floor == roomsVector[j].floor) {
+                                        return 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return 0;
+                }
+            }
             else {
-                return 1;
+                // Check if both entities are assigned to a room in the current solution
+                if (solution[parametersIds[0]] == -1 || solution[parametersIds[1]] == -1) {
+                    return -1;
+                }
+                else {
+                    // Get the rooms associated with each entity
+                    for (int i = 0; i < (int) roomsVector.size(); i++) {
+                        if (roomsVector[i].id == solution[parametersIds[0]]) {
+                            i = (int) roomsVector.size();
+
+                            for (int j = 0; j < (int) roomsVector.size(); j++) {
+                                if (roomsVector[j].id == solution[parametersIds[1]]) {
+                                    j = i;
+
+                                    // Two rooms are said to be away if they are on the distinct floors
+                                    if (roomsVector[i].floor != roomsVector[j].floor) {
+                                        return 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return 0;
+                }
             }
         }
-
 };
