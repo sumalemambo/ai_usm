@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <math.h>
 
 #include "entity.cpp"
 #include "constraint.cpp"
@@ -104,6 +105,9 @@ class OSAPInstance {
         {
             vector<int> partialSolution;
             vector<vector<int>> visitedRooms;
+            vector<Entity> unassignedEntities;
+
+            unassignedEntities = findLargeEntities(entitiesVector);
 
             partialSolution.reserve(entitiesVector.size());
             visitedRooms.resize(roomsVector.size());
@@ -155,6 +159,11 @@ class OSAPInstance {
             return max(r.capacity - e.size, 2 * (e.size - r.capacity));
         }
 
+        /* 
+        * checkHardConstraint() verifies if the current solution satisfies all
+        * the evaluable hard constraints. Returns 0 if a hard constraint is 
+        * violated and 1 otherwise.
+        */
         int checkHardConstraints(vector<int> solution) {
             for (auto constraint : hardConstraints) {
                 if (constraint.checkConstraint(solution,roomsVector) == 0) {
@@ -163,8 +172,55 @@ class OSAPInstance {
             }
             return 1;
         }
+        
+        // calculateAverage() calculates and returns the average size of the entities.
+        float calculateAverage(vector<Entity> entitiesVector) {
+            float average = 0;
+            for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                average += entitiesVector[i].size;
+            }
+            average = average / entitiesVector.size();
+            return average;
+        }
+
+        /* calculateStandardDeviation() calculates and returns the standard deviation of the size
+        * of the entities
+        */
+        float calculateStandardDeviation(vector<Entity> entitiesVector, float average) {
+            float standardDeviation = 0;
+            for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                standardDeviation += pow(entitiesVector[i].size - average, 2);
+            }
+            standardDeviation = standardDeviation / entitiesVector.size();
+            return sqrt(standardDeviation);
+        }
+
+        /* findLargeEntities() identifies and returns a vector containing entities whose size
+        * is abnormal(large).
+        */
+        vector<Entity> findLargeEntities(vector<Entity> entitiesVector) {
+            vector<Entity> largeEntities;
+            float average;
+            float standardDeviation;
+            float upperLimit;
+
+            average = calculateAverage(entitiesVector);
+            standardDeviation = calculateStandardDeviation(entitiesVector, average);
+
+            // We define an entity as large if space(entity) > average + 2 * sd
+            upperLimit = average + 2 * standardDeviation;
+
+            for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                if (entitiesVector[i].size > upperLimit) {
+                    largeEntities.push_back(entitiesVector[i]);
+                }
+            }
+            return largeEntities;
+        }
 
         // Extra utilities
+
+        // readFromHeader() returns the int in the current line of the header in file.
         int readFromHeader(istream& file)
         {
             int n;
@@ -177,6 +233,7 @@ class OSAPInstance {
             return n;
         }
 
+        // readEntities() reads and returns a vector containing all the entities in file.
         vector<Entity> readEntities(istream& file, int nEntities)
         {
             int id;
@@ -187,6 +244,7 @@ class OSAPInstance {
 
             entityVector.reserve(nEntities);
 
+            // Ignore blank and redundant lines
             getline(file, line);
             getline(file, line);
 
@@ -200,6 +258,7 @@ class OSAPInstance {
             return entityVector;
         }
 
+        // readRooms() reads and returns a vector containing all the rooms in file.
         vector<Room> readRooms(istream& file, int nRooms, int nFloors) {
             int id;
             int floor;
@@ -209,14 +268,12 @@ class OSAPInstance {
             string line;
             vector<Room> roomsVector;
             vector<int> adjList;
-            shared_ptr<vector<vector<int>>> roomsInFloor = make_shared<vector<vector<int>>>();
+
+            // Ignore blank and redundant lines
+            getline(file, line);
+            getline(file, line);
 
             roomsVector.reserve(nRooms);
-            (*roomsInFloor).resize(nFloors);
-
-            getline(file, line);
-            getline(file, line);
-
             for (int i = 0; i < nRooms; i++) {
                 getline(file, line);
                 istringstream lineStream(line);
@@ -229,14 +286,13 @@ class OSAPInstance {
                 }
                 roomsVector.push_back(Room(id, floor, capacity, adjList));
                 adjList.clear();
-                (*roomsInFloor)[floor].push_back(id);
-            }
-            for (int i = 0; i < (int) roomsVector.size(); i++) {
-                roomsVector[i].setRoomsInFloor(roomsInFloor);
             }
             return roomsVector;
         }
 
+        /* readConstraints() reads and returns the constraints as a 2-dimensional vector where the index 0
+        * contains a vector of soft constraints and the index 1 contains a vector of hard constraints
+        */
         vector<vector<Constraint>> readConstraints(istream& file, int nConstraints, int nHardConstraints,
          int nSoftConstraints)
         {
@@ -256,6 +312,7 @@ class OSAPInstance {
 
             parametersIds.reserve(2);
 
+            // Ignore blank and redundant lines
             getline(file, line);
             getline(file, line);
 
@@ -264,11 +321,14 @@ class OSAPInstance {
                 istringstream lineStream(line);
 
                 lineStream >> id >> constraintType >> constraintHardness;
+
+                // Read and save constraint parameters
                 lineStream >> parameter;
                 parametersIds.push_back(parameter);
                 lineStream >> parameter;
                 parametersIds.push_back(parameter);
 
+                // Handle the different types of constraints
                 if (constraintHardness == SOFT_CONSTRAINT) {
                     softConstraintsVector.push_back(Constraint(id, constraintType, parametersIds));
                 }

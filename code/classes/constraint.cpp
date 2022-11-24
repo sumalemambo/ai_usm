@@ -152,7 +152,7 @@ class Constraint {
 
                             // Iterate over the adjacency list of the entity 1 room
                             // to find out if the entity 2 room is adjacent
-                            for (int j = 0; j < roomEntity.adjList.size(); j++) {
+                            for (int j = 0; j < (int) roomEntity.adjList.size(); j++) {
 
                                 // Check if entity 2 room is adjacent to entity 1 room
                                 if (solution[parametersIds[1]] == roomEntity.adjList[j]) {

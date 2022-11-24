@@ -10,7 +10,6 @@ class Room {
         int floor;
         float capacity;
         vector<int> adjList;
-        shared_ptr<vector<vector<int>>> roomsInFloor;
 
         // Class constructor
         Room(int id, int floor, float capacity, vector<int> adjList) {
@@ -18,9 +17,5 @@ class Room {
             this->floor = floor;
             this->capacity = capacity;
             this->adjList = adjList;
-        }
-
-        void setRoomsInFloor(shared_ptr<vector<vector<int>>> roomsInFloor) {
-            this->roomsInFloor = roomsInFloor;
         }
 };

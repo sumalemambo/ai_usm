@@ -1,3 +1,4 @@
+// Represents an entity of the assignment problem
 class Entity {
     public:
         int id;
