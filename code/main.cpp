@@ -10,5 +10,6 @@ int main(int argc, char *argv[])
     for (int i = 0; i < greedySolution.size(); i++) {
         cout << greedySolution[i] << '\n';
     }
+    problemInstance.Greedy();
     return 0;
 }

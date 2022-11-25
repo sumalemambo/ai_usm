@@ -15,6 +15,8 @@ using namespace std;
 // Represents a whole instance of OSAP
 class OSAPInstance {
     public:
+        const vector<int> penaltyCosts = {20, 10, 10, 10, 10, 10, 50, 10, 10 ,10};
+
         static const int SOFT_CONSTRAINT = 0;
         static const int HARD_CONSTRAINT = 1;
 
@@ -97,18 +99,27 @@ class OSAPInstance {
             return 0;
         }
 
-        float calcObj() {
-            return 0.01;
+        vector<int> Greedy() {
+            vector<int> partialSolution;
+            vector<vector<int>> visitedRooms;
+
+            partialSolution.reserve(entitiesVector.size());
+            visitedRooms.resize(roomsVector.size());
+
+            
+            vector<Entity> unassignedEntities = sort(entitiesVector);
+            reverse(unassignedEntities.begin(), unassignedEntities.end());
+
+            cout << '\n';
+            cout << unassignedEntities.size() << '\n';
+            
+            return partialSolution;
         }
 
         vector<int> solveGreedy()
         {
             vector<int> partialSolution;
             vector<vector<int>> visitedRooms;
-            vector<Entity> unassignedEntities;
-
-            unassignedEntities = findLargeEntities(entitiesVector);
-            sortByConstraints(entitiesVector);
 
             partialSolution.reserve(entitiesVector.size());
             visitedRooms.resize(roomsVector.size());
@@ -156,6 +167,18 @@ class OSAPInstance {
         }
     private:
 
+        float calcSoftPenalty(vector<int> solution) {
+            float penalty;
+
+            penalty = 0;
+            for (auto constraint : softConstraints) {
+                if (constraint.checkConstraint(solution, roomsVector) == 0) {
+                    penalty += penaltyCosts[constraint.constraintType];
+                }
+            }
+            return penalty;
+        }
+
         float objectiveFunction(Entity e, Room r) {
             return max(r.capacity - e.size, 2 * (e.size - r.capacity));
         }
@@ -167,7 +190,7 @@ class OSAPInstance {
         */
         int checkHardConstraints(vector<int> solution) {
             for (auto constraint : hardConstraints) {
-                if (constraint.checkConstraint(solution,roomsVector) == 0) {
+                if (constraint.checkConstraint(solution, roomsVector) == 0) {
                     return 0;
                 }
             }
@@ -199,11 +222,13 @@ class OSAPInstance {
         /* findLargeEntities() identifies and returns a vector containing entities whose size
         * is abnormal(large).
         */
-        vector<Entity> findLargeEntities(vector<Entity> entitiesVector) {
+        vector<Entity> findLargeEntities(vector<Entity>& entitiesVector) {
             vector<Entity> largeEntities;
             float average;
             float standardDeviation;
             float upperLimit;
+            float maxSize;
+            int maxIndex;
 
             average = calculateAverage(entitiesVector);
             standardDeviation = calculateStandardDeviation(entitiesVector, average);
@@ -213,8 +238,26 @@ class OSAPInstance {
 
             for (int i = 0; i < (int) entitiesVector.size(); i++) {
                 if (entitiesVector[i].size > upperLimit) {
-                    largeEntities.push_back(entitiesVector[i]);
+                    largeEntities.push_back(entitiesVector.erase(entitiesVector.begin() + i)[0]);
                 }
+            }
+
+            // Sort large entities vector
+            for (int i = 0; i < (int) largeEntities.size(); i++) {
+                maxSize = largeEntities[i].size;
+                maxIndex = i;
+                for (int j = i; j < (int) largeEntities.size(); j++) {
+                    if (largeEntities[j].size > maxSize) {
+                        maxSize = largeEntities[j].size;
+                        maxIndex = j;
+                    }
+                }
+
+                // Swap
+                Entity temp = largeEntities[i];
+                largeEntities[i] = largeEntities[maxIndex];
+                largeEntities[maxIndex] = temp;
+
             }
             return largeEntities;
         }
@@ -259,26 +302,73 @@ class OSAPInstance {
             }
             return nConstraints;
         }
-
-        vector<Entity> sortByConstraints(vector<Entity> entitiesVector) {
-            int max;
+        
+        /* sortByConstraints() sort and returns the entitiesVector according to hard constraints
+        * then soft constraints.
+        */
+        vector<Entity> sortByConstraints(vector<Entity>& entitiesVector) {
+            int maxConstraints;
             int index;
             int nConstraints;
             vector<Entity> sortedEntities;
             
             sortedEntities.reserve(entitiesVector.size());
 
+            // Find the entity with the most number of hard constraints in entitiesVector
             do {
-                max = 0;
+                maxConstraints = 0;
                 for (int i = 0; i < (int) entitiesVector.size(); i++) {
                     nConstraints = getNumberOfConstraints(entitiesVector[i], HARD_CONSTRAINT);
-                    if (nConstraints > max) {
-                        max = nConstraints;
+                    if (nConstraints > maxConstraints) {
+                        maxConstraints = nConstraints;
                         index = i;
                     }
                 }
-                max = 0;
-            } while (max != 0);
+
+                // Check that entity is at least connected to a restriction
+                if (maxConstraints > 0) {
+                    sortedEntities.push_back(entitiesVector.erase(entitiesVector.begin() + index)[0]);
+                }
+            } while (maxConstraints != 0);
+
+            // Find the entity with the most number of soft constraints in entitiesVector
+            do {
+                maxConstraints = 0;
+                for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                    nConstraints = getNumberOfConstraints(entitiesVector[i], SOFT_CONSTRAINT);
+                    if (nConstraints > maxConstraints) {
+                        maxConstraints = nConstraints;
+                        index = i;
+                    }
+                }
+
+                // Check that entity is at least connected to a restriction
+                if (maxConstraints > 0) {
+                    sortedEntities.push_back(entitiesVector.erase(entitiesVector.begin() + index)[0]);
+                }
+            } while (maxConstraints != 0);
+
+            // Add unrestricted entities
+            while (entitiesVector.size() > 0) {
+                sortedEntities.push_back(entitiesVector.back());
+                entitiesVector.pop_back();
+            }
+            return sortedEntities;
+        }
+
+        /* sort() sorts and returns the vector of entities entityVector according to three criteria:
+        * large entities, most connected entities to hard constraints and most connected entities to
+        * soft constraints.
+        */
+        vector<Entity> sort(vector<Entity> entityVector) {
+            vector<Entity> sortedEntities;
+            vector<Entity> entitiesByConstraint;
+
+            sortedEntities = findLargeEntities(entityVector);
+            entitiesByConstraint = sortByConstraints(entityVector);
+            
+            sortedEntities.insert(sortedEntities.end(), entitiesByConstraint.begin(), entitiesByConstraint.end());
+
             return sortedEntities;
         }
 
