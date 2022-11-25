@@ -108,6 +108,7 @@ class OSAPInstance {
             vector<Entity> unassignedEntities;
 
             unassignedEntities = findLargeEntities(entitiesVector);
+            sortByConstraints(entitiesVector);
 
             partialSolution.reserve(entitiesVector.size());
             visitedRooms.resize(roomsVector.size());
@@ -216,6 +217,69 @@ class OSAPInstance {
                 }
             }
             return largeEntities;
+        }
+
+        /* getNumberOfConstraints() calculates and returns the numbers of constraints
+        * with a specific hardness associated with the entity
+        */
+        int getNumberOfConstraints(Entity entity, int hardness) {
+            int nConstraints = 0;
+            vector<Constraint> constraints;
+            
+            // Search on specific set of constraints according to hardness
+            if (hardness == SOFT_CONSTRAINT) {
+                constraints = softConstraints;
+            }
+            else {
+                constraints = hardConstraints;
+            }
+            for (int i = 0; i < (int) constraints.size(); i++) {
+
+                // Entity is never associated with a capacity constraint
+                if (constraints[i].constraintType != CAPACITY_CONSTRAINT) {
+                    if (constraints[i].parametersIds[0] == entity.id) {
+                        nConstraints += 1;
+                    } 
+                    else {
+
+                        /* Allocation, non-allocation constraint second parameter id is a room
+                        * not an entity
+                        */ 
+                        if (constraints[i].constraintType != ALLOCATION_CONSTRAINT &&
+                        constraints[i].constraintType != NONALLOCATION_CONSTRAINT && 
+                        constraints[i].constraintType != NOTSHARING_CONSTRAINT) {
+
+                            // Check on the other parameter if entity is referenced
+                            if (constraints[i].parametersIds[1] == entity.id) {
+                                nConstraints += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            return nConstraints;
+        }
+
+        vector<Entity> sortByConstraints(vector<Entity> entitiesVector) {
+            int max;
+            int index;
+            int nConstraints;
+            vector<Entity> sortedEntities;
+            
+            sortedEntities.reserve(entitiesVector.size());
+
+            do {
+                max = 0;
+                for (int i = 0; i < (int) entitiesVector.size(); i++) {
+                    nConstraints = getNumberOfConstraints(entitiesVector[i], HARD_CONSTRAINT);
+                    if (nConstraints > max) {
+                        max = nConstraints;
+                        index = i;
+                    }
+                }
+                max = 0;
+            } while (max != 0);
+            return sortedEntities;
         }
 
         // Extra utilities
