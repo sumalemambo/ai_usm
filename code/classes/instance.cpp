@@ -100,19 +100,72 @@ class OSAPInstance {
         }
 
         vector<int> Greedy() {
+            int root;
+            float penalty;
+            float minPenalty;
+            int minPenaltyRoomIndex;
             vector<int> partialSolution;
+            vector<Entity> unassignedEntities;
+            vector<Entity> assignedEntities;
             vector<vector<int>> visitedRooms;
 
-            partialSolution.reserve(entitiesVector.size());
-            visitedRooms.resize(roomsVector.size());
 
-            
-            vector<Entity> unassignedEntities = sort(entitiesVector);
+            partialSolution.resize(entitiesVector.size());
+            unassignedEntities = sort(entitiesVector);
             reverse(unassignedEntities.begin(), unassignedEntities.end());
 
-            cout << '\n';
-            cout << unassignedEntities.size() << '\n';
-            
+            // Root corresponds to the id where greedy starts solving
+            root = unassignedEntities[unassignedEntities.size() - 1].id;
+
+            assignedEntities.reserve(unassignedEntities.size());
+
+            // Vector to keep track of already tried rooms
+            visitedRooms.resize(unassignedEntities.size());
+
+            // Fill partial solution vector as unassigned
+            for (int i = 0; i < (int) partialSolution.size(); i++) {
+                partialSolution[i] = UNASSIGNED_ENTITY;
+            }
+
+
+            do {
+                // Get entity to assign
+                Entity entity = unassignedEntities.back();
+                unassignedEntities.pop_back();
+
+                minPenalty = -1;
+                minPenaltyRoomIndex = -1;
+
+                for (int i = 0; i < (int) roomsVector.size(); i++) {
+
+                    // Check that rooms has not been previously tried
+                    if (find(visitedRooms[entity.id].begin(), visitedRooms[entity.id].end(), roomsVector[i].id) == visitedRooms[entity.id].end()) {
+                        visitedRooms[entity.id].push_back(roomsVector[i].id);
+                        
+                        // Assign room to partial solution
+                        partialSolution[entity.id] = roomsVector[i].id;
+
+                        // Calc penalty
+                        penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
+
+                        // Check if current room penalty is lower than the best one
+                        if (minPenalty > penalty || minPenaltyRoomIndex == -1) {
+                            minPenalty = penalty;
+                            minPenaltyRoomIndex = i;
+                        }
+
+                    }
+                    partialSolution[entity.id] = roomsVector[i].id;
+                    penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
+
+                    if (minPenalty > penalty || minPenaltyRoomIndex == -1) {
+                        minPenalty = penalty;
+                        minPenaltyRoomIndex = i;
+                    }
+                }
+
+            } while(partialSolution[root] != UNASSIGNED_ENTITY && visitedRooms[root].size() != roomsVector.size());
+
             return partialSolution;
         }
 
@@ -183,6 +236,14 @@ class OSAPInstance {
             return max(r.capacity - e.size, 2 * (e.size - r.capacity));
         }
 
+        float roomUsePenalty(Entity e, Room r) {
+            return max(r.capacity - e.size, 2 * (e.size - r.capacity));
+        }
+
+        float greedyPenalty(Entity e, Room r, vector<int> solution){
+            return roomUsePenalty(e, r) + calcSoftPenalty(solution);
+        }
+
         /* 
         * checkHardConstraint() verifies if the current solution satisfies all
         * the evaluable hard constraints. Returns 0 if a hard constraint is 
@@ -236,29 +297,24 @@ class OSAPInstance {
             // We define an entity as large if space(entity) > average + 2 * sd
             upperLimit = average + 2 * standardDeviation;
 
-            for (int i = 0; i < (int) entitiesVector.size(); i++) {
-                if (entitiesVector[i].size > upperLimit) {
-                    largeEntities.push_back(entitiesVector.erase(entitiesVector.begin() + i)[0]);
-                }
-            }
+            do {
+                maxSize = 0;
+                for (int i = 0; i < (int) entitiesVector.size(); i++) {
 
-            // Sort large entities vector
-            for (int i = 0; i < (int) largeEntities.size(); i++) {
-                maxSize = largeEntities[i].size;
-                maxIndex = i;
-                for (int j = i; j < (int) largeEntities.size(); j++) {
-                    if (largeEntities[j].size > maxSize) {
-                        maxSize = largeEntities[j].size;
-                        maxIndex = j;
+                    // Check that entity is large
+                    if (entitiesVector[i].size > upperLimit) {
+                        if (entitiesVector[i].size > maxSize) {
+                            maxSize = entitiesVector[i].size;
+                            maxIndex = i;
+                        }
                     }
                 }
+                if (maxSize != 0) {
+                    largeEntities.push_back(entitiesVector[maxIndex]);
+                    entitiesVector.erase(entitiesVector.begin() + maxIndex);
+                }
+            } while (maxSize != 0);
 
-                // Swap
-                Entity temp = largeEntities[i];
-                largeEntities[i] = largeEntities[maxIndex];
-                largeEntities[maxIndex] = temp;
-
-            }
             return largeEntities;
         }
 
@@ -327,7 +383,8 @@ class OSAPInstance {
 
                 // Check that entity is at least connected to a restriction
                 if (maxConstraints > 0) {
-                    sortedEntities.push_back(entitiesVector.erase(entitiesVector.begin() + index)[0]);
+                    sortedEntities.push_back(entitiesVector[index]);
+                    entitiesVector.erase(entitiesVector.begin() + index);
                 }
             } while (maxConstraints != 0);
 
@@ -344,7 +401,8 @@ class OSAPInstance {
 
                 // Check that entity is at least connected to a restriction
                 if (maxConstraints > 0) {
-                    sortedEntities.push_back(entitiesVector.erase(entitiesVector.begin() + index)[0]);
+                    sortedEntities.push_back(entitiesVector[index]);
+                    entitiesVector.erase(entitiesVector.begin() + index);
                 }
             } while (maxConstraints != 0);
 
