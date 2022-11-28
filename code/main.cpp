@@ -6,10 +6,10 @@ int main(int argc, char *argv[])
     string path = "./instances/" + (string) argv[1] + ".txt";
 
     problemInstance.init(path);
-    vector<int> greedySolution = problemInstance.solveGreedy();
-    for (int i = 0; i < greedySolution.size(); i++) {
-        cout << greedySolution[i] << '\n';
-    }
-    problemInstance.Greedy();
+    vector<int> greedySolution;
+    cout << '\n';
+    greedySolution = problemInstance.Greedy(problemInstance.roomsVector);
+    problemInstance.HillClimbingBI(greedySolution);
+    cout << '\n';
     return 0;
 }

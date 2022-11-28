@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <random>
 #include <algorithm>
 #include <math.h>
 
@@ -20,10 +21,14 @@ class OSAPInstance {
         static const int SOFT_CONSTRAINT = 0;
         static const int HARD_CONSTRAINT = 1;
 
+        mt19937 gen{28112022};
         vector<Entity> entitiesVector;
         vector<Room> roomsVector;
         vector<Constraint> hardConstraints;
         vector<Constraint> softConstraints;
+        uniform_int_distribution<> distribRooms;
+
+
 
         int init(string path) {
             int nEntities;
@@ -68,6 +73,8 @@ class OSAPInstance {
             hardConstraints.reserve(nHardConstraints);
             hardConstraints = constraintsVector[HARD_CONSTRAINT];
 
+
+
             /*
             Check constraint vector
             constraintsVector = readConstraints(file, nConstraints, nHardConstraints, nSoftConstraints);
@@ -98,8 +105,49 @@ class OSAPInstance {
             file.close();
             return 0;
         }
+        vector<int> HillClimbingBI(vector<int> solution) {
+            vector<int> bestSolution;
+            vector<int> bestNeighborSolution;
+            vector<int> neightborSolution;
+            float bestSolutionPenalty;
+            float bestNeighborPenalty;
+            float neightborPenalty;
+            int randomInt;
 
-        vector<int> Greedy() {
+            // Set random se
+            uniform_int_distribution<> distrib(0, 2);
+
+            bestSolution = solution;
+
+            // Add restarts for search diversification.
+            for (int i = 0; i < N_RESTARTS; i++) {
+
+                // Set a maximum of generated neighbors
+                for (int j = 0; j < MAX_ITERATIONS; j++) {
+
+                    // Generate random number
+                    randomInt = distrib(gen);
+
+                    if (randomInt == 0) {
+
+                    }
+                    else if (randomInt == 1) {
+
+                    }
+                    else {
+
+                    }
+
+                }
+            }
+
+            return solution;
+        }
+
+        /* greedy() builds a solution for the instance starting from an empty partial solution
+        * using a greedy algorithm.
+        */ 
+        vector<int> Greedy(vector<Room> roomsVector) {
             int root;
             float penalty;
             float minPenalty;
@@ -131,7 +179,6 @@ class OSAPInstance {
             do {
                 // Get entity to assign
                 Entity entity = unassignedEntities.back();
-                unassignedEntities.pop_back();
 
                 minPenalty = -1;
                 minPenaltyRoomIndex = -1;
@@ -145,27 +192,54 @@ class OSAPInstance {
                         // Assign room to partial solution
                         partialSolution[entity.id] = roomsVector[i].id;
 
-                        // Calc penalty
-                        penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
+                        // Check hard constraints
+                        if (checkHardConstraints(partialSolution) == 1) {
 
-                        // Check if current room penalty is lower than the best one
-                        if (minPenalty > penalty || minPenaltyRoomIndex == -1) {
-                            minPenalty = penalty;
-                            minPenaltyRoomIndex = i;
+                            // Calc penalty
+                            penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
+
+                            // Check if current room penalty is lower than the best one
+                            if (minPenalty > penalty || minPenaltyRoomIndex == -1) {
+                                minPenalty = penalty;
+                                minPenaltyRoomIndex = i;
+                            }
                         }
 
                     }
-                    partialSolution[entity.id] = roomsVector[i].id;
-                    penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
+                }
 
-                    if (minPenalty > penalty || minPenaltyRoomIndex == -1) {
-                        minPenalty = penalty;
-                        minPenaltyRoomIndex = i;
+                // Check if there is factible room to be assigned to the entity
+                if (minPenaltyRoomIndex != -1) {
+                    partialSolution[entity.id] = roomsVector[minPenaltyRoomIndex].id;
+
+                    roomsVector[minPenaltyRoomIndex].capacity -= entity.size;
+
+                    unassignedEntities.pop_back();
+                    assignedEntities.push_back(entity);
+                }
+
+                // Otherwise, try to assign another room to the previous entity
+                else {
+                    // Mark entity as UNASSIGNED
+                    partialSolution[entity.id] = UNASSIGNED_ENTITY;
+
+                    // Delete previously marked as visited rooms, need to check again with new assign
+                    visitedRooms[entity.id].clear();
+
+                    if (assignedEntities.size() > 0) {
+                        Entity prevEntity = assignedEntities.back();
+
+                        // Erase previous entity as assigned
+                        assignedEntities.pop_back();
+
+                        roomsVector[partialSolution[prevEntity.id]].capacity += prevEntity.size;
+                        partialSolution[prevEntity.id] = UNASSIGNED_ENTITY;
+                        unassignedEntities.push_back(prevEntity);
                     }
                 }
 
-            } while(partialSolution[root] != UNASSIGNED_ENTITY && visitedRooms[root].size() != roomsVector.size());
-
+            } while((partialSolution[root] != UNASSIGNED_ENTITY && visitedRooms[root].size() != roomsVector.size()) || (assignedEntities.size() != partialSolution.size()));
+            cout << "COST = " <<objFunction(partialSolution) << '\n';
             return partialSolution;
         }
 
@@ -220,6 +294,45 @@ class OSAPInstance {
         }
     private:
 
+        vector<int> entityRelocate(vector<int> solution) {
+
+            // Set random seed and distribution
+            mt19937 gen{28112022};
+            uniform_int_distribution<> distribRoom(0, (int) roomsVector.size() - 1);
+
+
+        }
+
+        /* objFunction() calculates the value of the objective function for
+        * the current solution.
+        */
+        float objFunction(vector<int> solution) {
+            float capacity;
+            float usagePenalty;
+            float sum;
+
+            usagePenalty = 0;
+            for (int i = 0; i < (int) roomsVector.size(); i++) {
+                capacity = roomsVector[i].capacity;
+                sum = 0;
+                for (int j = 0; j < (int) solution.size(); j++) {
+                    if (solution[j] == roomsVector[i].id) {
+                        for (int k = 0; k < (int) entitiesVector.size(); k++) {
+                            if (j == entitiesVector[k].id) {
+                                sum += entitiesVector[k].size;
+                            }
+                        }
+                    }
+                }
+                usagePenalty += max(capacity - sum, 2 * (sum - capacity));
+            }
+            return usagePenalty + calcSoftPenalty(solution);
+        }
+
+
+        /* calcSoftPenalty() calculates the penalty associated to the violation of soft
+        * constraints in the given solution.
+        */
         float calcSoftPenalty(vector<int> solution) {
             float penalty;
 
