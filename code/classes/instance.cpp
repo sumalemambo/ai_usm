@@ -27,6 +27,7 @@ class OSAPInstance {
         vector<Constraint> hardConstraints;
         vector<Constraint> softConstraints;
         uniform_int_distribution<> distribRooms;
+        uniform_int_distribution<> distribEntities;
 
 
 
@@ -73,6 +74,9 @@ class OSAPInstance {
             hardConstraints.reserve(nHardConstraints);
             hardConstraints = constraintsVector[HARD_CONSTRAINT];
 
+            distribRooms = uniform_int_distribution<>(0, (int) roomsVector.size() - 1);
+            distribEntities = uniform_int_distribution<>(0, (int) entitiesVector.size() - 1);
+
 
 
             /*
@@ -108,39 +112,77 @@ class OSAPInstance {
         vector<int> HillClimbingBI(vector<int> solution) {
             vector<int> bestSolution;
             vector<int> bestNeighborSolution;
-            vector<int> neightborSolution;
+            vector<int> neighborSolution;
             float bestSolutionPenalty;
             float bestNeighborPenalty;
-            float neightborPenalty;
+            float neighborPenalty;
             int randomInt;
 
-            // Set random se
+            // Set random distribution
             uniform_int_distribution<> distrib(0, 2);
 
             bestSolution = solution;
+            bestSolutionPenalty = objFunction(bestSolution);
+            bestNeighborPenalty = -1;
 
             // Add restarts for search diversification.
             for (int i = 0; i < N_RESTARTS; i++) {
 
+                // To provide diversification we accept a lower  or equal quality
+                // solution on each restart
+                if (bestNeighborPenalty != -1) {
+                    solution = bestNeighborSolution;
+                }
+
                 // Set a maximum of generated neighbors
                 for (int j = 0; j < MAX_ITERATIONS; j++) {
+                    neighborPenalty = -1;
 
                     // Generate random number
                     randomInt = distrib(gen);
 
                     if (randomInt == 0) {
+                        neighborSolution = entityRelocate(solution);
 
+                        // Check if new solution is feasible
+                        if (checkHardConstraints(neighborSolution) == 1) {
+                            neighborPenalty = objFunction(neighborSolution);
+                        }
                     }
                     else if (randomInt == 1) {
+                        neighborSolution = entitySwap(solution);
 
+                        // Check if newly generated solution is feasible
+                        if (checkHardConstraints(neighborSolution) == 1) {
+                            neighborPenalty = objFunction(neighborSolution);
+                        }
                     }
                     else {
+                        neighborSolution = roomInterchange(solution);
 
+                        // Check if newly generated solution is feasible
+                        if (checkHardConstraints(neighborSolution) == 1) {
+                            neighborPenalty = objFunction(neighborSolution);
+                        }
                     }
 
+                    // Check if neighboor solution is the best one yet
+                    if (neighborPenalty != -1) {
+                        if (bestNeighborPenalty > neighborPenalty || bestNeighborPenalty == -1) {
+                            bestNeighborPenalty = neighborPenalty;
+                            bestNeighborSolution = neighborSolution;
+                        }
+                    }
+                }
+
+                if (bestNeighborPenalty != -1) {
+                    if (bestSolutionPenalty > bestNeighborPenalty) {
+                        bestSolutionPenalty = bestNeighborPenalty;
+                        bestSolution = bestNeighborSolution;
+                    }
                 }
             }
-
+            cout << "Hill-climbing cost = " << objFunction(bestSolution) << '\n';
             return solution;
         }
 
@@ -164,6 +206,7 @@ class OSAPInstance {
 
             // Root corresponds to the id where greedy starts solving
             root = unassignedEntities[unassignedEntities.size() - 1].id;
+            cout << root << '\n';
 
             assignedEntities.reserve(unassignedEntities.size());
 
@@ -182,7 +225,6 @@ class OSAPInstance {
 
                 minPenalty = -1;
                 minPenaltyRoomIndex = -1;
-
                 for (int i = 0; i < (int) roomsVector.size(); i++) {
 
                     // Check that rooms has not been previously tried
@@ -194,7 +236,7 @@ class OSAPInstance {
 
                         // Check hard constraints
                         if (checkHardConstraints(partialSolution) == 1) {
-
+                            cout << "XD2";
                             // Calc penalty
                             penalty = greedyPenalty(entity, roomsVector[i], partialSolution);
 
@@ -220,24 +262,25 @@ class OSAPInstance {
 
                 // Otherwise, try to assign another room to the previous entity
                 else {
-                    // Mark entity as UNASSIGNED
-                    partialSolution[entity.id] = UNASSIGNED_ENTITY;
+                    if (entity.id != root) {
+                        // Mark entity as UNASSIGNED
+                        partialSolution[entity.id] = UNASSIGNED_ENTITY;
 
-                    // Delete previously marked as visited rooms, need to check again with new assign
-                    visitedRooms[entity.id].clear();
+                        // Delete previously marked as visited rooms, need to check again with new assign
+                        visitedRooms[entity.id].clear();
 
-                    if (assignedEntities.size() > 0) {
-                        Entity prevEntity = assignedEntities.back();
+                        if (assignedEntities.size() > 0) {
+                            Entity prevEntity = assignedEntities.back();
 
-                        // Erase previous entity as assigned
-                        assignedEntities.pop_back();
+                            // Erase previous entity as assigned
+                            assignedEntities.pop_back();
 
-                        roomsVector[partialSolution[prevEntity.id]].capacity += prevEntity.size;
-                        partialSolution[prevEntity.id] = UNASSIGNED_ENTITY;
-                        unassignedEntities.push_back(prevEntity);
+                            roomsVector[partialSolution[prevEntity.id]].capacity += prevEntity.size;
+                            partialSolution[prevEntity.id] = UNASSIGNED_ENTITY;
+                            unassignedEntities.push_back(prevEntity);
+                        }
                     }
                 }
-
             } while((partialSolution[root] != UNASSIGNED_ENTITY && visitedRooms[root].size() != roomsVector.size()) || (assignedEntities.size() != partialSolution.size()));
             cout << "COST = " <<objFunction(partialSolution) << '\n';
             return partialSolution;
@@ -293,14 +336,67 @@ class OSAPInstance {
             return partialSolution;
         }
     private:
+        vector<int> roomInterchange(vector<int> solution) {
+            int roomIndex1;
+            int roomIndex2;
+            vector<int> entitiesRoom1;
+            vector<int> entitiesRoom2;
 
+            // Get random rooms indexes
+            roomIndex1 = distribRooms(gen);
+            roomIndex2 = distribRooms(gen);
+
+            // Find entities allocated to rooms with id roomIndex1 and roomIndex2
+            // and rellocate them
+            for(int i = 0; i < (int) solution.size(); i++) {
+                if (solution[i] == roomIndex1) {
+                    solution[i] = roomIndex2;
+                }
+                else if (solution[i] == roomIndex2) {
+                    solution[i] = roomIndex1;
+                }
+            }
+
+            return solution;
+        }
+
+        /* entitySwap() selects two entities at random and interchange their
+        * rooms
+        */
+        vector<int> entitySwap(vector<int> solution) {
+            int entityIndex1;
+            int entityIndex2;
+            int roomIndex;
+
+            // Get random entities to swap
+            entityIndex1 = distribEntities(gen);
+            entityIndex2 = distribEntities(gen);
+
+            // Temp save
+            roomIndex = solution[entityIndex2];
+
+            // Swap
+            solution[entityIndex2] = solution[entityIndex1];
+            solution[entityIndex1] = roomIndex;
+
+            return solution;
+        }
+
+        /* entityRelocate() selects a random entity and relocates it to another
+        * room
+        */
         vector<int> entityRelocate(vector<int> solution) {
+            int entityIndex;
+            int roomIndex;
+            
+            // Select a random entity and a random room to relocate
+            entityIndex = distribEntities(gen);
+            roomIndex = distribRooms(gen);
 
-            // Set random seed and distribution
-            mt19937 gen{28112022};
-            uniform_int_distribution<> distribRoom(0, (int) roomsVector.size() - 1);
+            // Swap
+            solution[entityIndex] = roomIndex;
 
-
+            return solution;
         }
 
         /* objFunction() calculates the value of the objective function for

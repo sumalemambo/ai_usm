@@ -15,7 +15,7 @@ static const int ADJACENCY_CONSTRAINT = 7;
 static const int NEARBY_CONSTRAINT = 8;
 static const int AWAYFROM_CONSTRAINT = 9;
 
-const int MAX_ITERATIONS = 16;
+const int MAX_ITERATIONS = 1000;
 const int N_RESTARTS = 12;
 
 #endif

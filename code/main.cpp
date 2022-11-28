@@ -7,9 +7,9 @@ int main(int argc, char *argv[])
 
     problemInstance.init(path);
     vector<int> greedySolution;
+    vector<int> hillClimbingSolution;
     cout << '\n';
     greedySolution = problemInstance.Greedy(problemInstance.roomsVector);
-    problemInstance.HillClimbingBI(greedySolution);
     cout << '\n';
     return 0;
 }
