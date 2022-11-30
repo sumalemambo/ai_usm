@@ -8,9 +8,7 @@ int main(int argc, char *argv[])
     problemInstance.init(path);
     vector<int> greedySolution;
     greedySolution = problemInstance.Greedy(problemInstance.roomsVector);
-    problemInstance.HillClimbingBI(greedySolution);
-    for (int i = 0; i < (int) problemInstance.roomsVector.size(); i++) {
-        cout << problemInstance.roomsVector[i].capacity << '\n';
-    }
+    problemInstance.writeSolutionToFile(problemInstance.HillClimbingBI(greedySolution));
+
     return 0;
 }

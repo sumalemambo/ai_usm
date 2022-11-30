@@ -66,21 +66,18 @@ class Constraint {
                 // Get the room instance associated with the constraint (via id) 
                 for (int i = 0; i < (int) roomsVector.size(); i++) {
                     if (roomsVector[i].id == parametersIds[0]) {
-                        for (int j = 0; j < (int) solution.size(); j++) {
-                            if (solution[j] == roomsVector[i].id) {
-                                for (int k = 0; k < (int) entitiesVector.size(); k++) {
-                                    if (j == entitiesVector[k].id) {
-                                        sumSize += entitiesVector[k].size;
-                                        break;
-                                    }
-                                }
+                        for (int j = 0; j < (int) entitiesVector.size(); j++) {
+                            if (solution[entitiesVector[j].id] == roomsVector[i].id) {
+                                sumSize += entitiesVector[j].size;
                             }
-
                         }
+
                         if (roomsVector[i].capacity - sumSize > 0) {
                             return 1;
                         }
-                        return 0;
+                        else{
+                            return 0;
+                        }
                     }
                 }
                 return 0;

@@ -284,6 +284,62 @@ class OSAPInstance {
             cout << "Greedy cost = " <<objFunction(partialSolution) << '\n';
             return partialSolution;
         }
+
+        void writeSolutionToFile(vector<int> solution) {
+            int nBrokenSoftConstraints;
+            vector<int> idBrokenSoftConstraints;
+            float nonUsedSpace;
+            float badUsedSpace;
+            float sumSize;
+            float space;
+            
+            // Create file
+            ofstream instanceFile("INSTANCIA.out");
+
+            nBrokenSoftConstraints = 0;
+            for (int i = 0; i < (int) softConstraints.size(); i++) {
+
+                // Check if soft constraint is broken
+                if (softConstraints[i].checkConstraint(solution, entitiesVector, roomsVector) == 0) {
+                    nBrokenSoftConstraints += 1;
+                    idBrokenSoftConstraints.push_back(softConstraints[i].id);
+                }
+            }
+
+            // Write broken constraints to file
+            instanceFile << nBrokenSoftConstraints;
+            for (int i = 0; i < nBrokenSoftConstraints; i++) {
+                instanceFile << " " << idBrokenSoftConstraints[i];
+            }
+            instanceFile << '\n';
+
+            nonUsedSpace = 0;
+            badUsedSpace = 0;
+
+            // Find space
+            for (int i = 0; i < (int) roomsVector.size(); i++) {
+                sumSize = 0;
+                for (int j = 0; j < (int) entitiesVector.size(); j++) {
+                    if (solution[entitiesVector[j].id] == roomsVector[i].id) {
+                        sumSize += entitiesVector[j].size;
+                    }
+                }
+                space = roomsVector[i].capacity - sumSize;
+
+
+                if (space > 0) {
+                    nonUsedSpace += space;
+                }
+                else {
+                    badUsedSpace += (- 1 * space);
+                }
+            }
+
+            instanceFile << badUsedSpace + nonUsedSpace << " " << nonUsedSpace << " " << badUsedSpace;
+
+            instanceFile.close();
+        }
+
     private:
 
         /* roomInterchange() picks two rooms at random r1 and r2 and interchanges
@@ -705,16 +761,5 @@ class OSAPInstance {
             constraintsVector[HARD_CONSTRAINT] = hardConstraintsVector;
 
             return constraintsVector;
-        }
-
-        void writeSolutionToFile(vector<int> solution) {
-            int nBrokenSoftConstraints;
-            vector<int> idBrokenSoftConstraints;
-
-            for (int i = 0; i < (int) softConstraints.size(); i++) {
-                if (softConstraints[i].checkConstraint(solution, entitiesVector, roomsVector) == 0) {
-                    
-                }
-            }
         }
 };
