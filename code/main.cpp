@@ -7,9 +7,10 @@ int main(int argc, char *argv[])
 
     problemInstance.init(path);
     vector<int> greedySolution;
-    vector<int> hillClimbingSolution;
-    cout << '\n';
     greedySolution = problemInstance.Greedy(problemInstance.roomsVector);
-    cout << '\n';
+    problemInstance.HillClimbingBI(greedySolution);
+    for (int i = 0; i < (int) problemInstance.roomsVector.size(); i++) {
+        cout << problemInstance.roomsVector[i].capacity << '\n';
+    }
     return 0;
 }

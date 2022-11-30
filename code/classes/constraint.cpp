@@ -24,7 +24,7 @@ class Constraint {
         * if not all entities are currently assigned) 1 if its satisfied and 0
         * otherwise.
         */
-        int checkConstraint(vector<int> solution, vector<Room> &roomsVector) {
+        int checkConstraint(vector<int> solution, vector<Entity> entitiesVector, vector<Room> &roomsVector) {
 
             // Handle the different types of contraints
             if (constraintType == ALLOCATION_CONSTRAINT) {
@@ -60,17 +60,27 @@ class Constraint {
                 }
             }
             else if (constraintType == CAPACITY_CONSTRAINT) {
+                float sumSize;
 
+                sumSize = 0;
                 // Get the room instance associated with the constraint (via id) 
                 for (int i = 0; i < (int) roomsVector.size(); i++) {
-                    if (roomsVector[i].id == solution[parametersIds[0]]) {
-                        Room constraintRoom = roomsVector[i];
-                        i = (int) roomsVector.size();
+                    if (roomsVector[i].id == parametersIds[0]) {
+                        for (int j = 0; j < (int) solution.size(); j++) {
+                            if (solution[j] == roomsVector[i].id) {
+                                for (int k = 0; k < (int) entitiesVector.size(); k++) {
+                                    if (j == entitiesVector[k].id) {
+                                        sumSize += entitiesVector[k].size;
+                                        break;
+                                    }
+                                }
+                            }
 
-                        // If room is not overused the constraint is satisfied
-                        if (constraintRoom.capacity >= 0) {
+                        }
+                        if (roomsVector[i].capacity - sumSize > 0) {
                             return 1;
                         }
+                        return 0;
                     }
                 }
                 return 0;
