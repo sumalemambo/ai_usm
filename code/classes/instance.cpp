@@ -292,6 +292,7 @@ class OSAPInstance {
             float badUsedSpace;
             float sumSize;
             float space;
+            vector<int> entitiesInRoom;
             
             // Create file
             ofstream instanceFile("INSTANCIA.out");
@@ -326,7 +327,7 @@ class OSAPInstance {
                 }
                 space = roomsVector[i].capacity - sumSize;
 
-
+                // Determine if space of room is badly used or non used
                 if (space > 0) {
                     nonUsedSpace += space;
                 }
@@ -335,7 +336,39 @@ class OSAPInstance {
                 }
             }
 
+            // Write space to file
             instanceFile << badUsedSpace + nonUsedSpace << " " << nonUsedSpace << " " << badUsedSpace;
+            instanceFile << '\n';
+            
+            // Get spaces and entities assigned to each room
+            for (int i = 0; i < (int) roomsVector.size(); i++) {
+                space = 0;
+                entitiesInRoom.clear();
+                for (int j = 0; j < (int) entitiesVector.size(); j++) {
+                    if (solution[entitiesVector[j].id] == roomsVector[i].id) {
+                        space += entitiesVector[j].size;
+                        entitiesInRoom.push_back(entitiesVector[j].id);
+                    }
+                }
+                space = roomsVector[i].capacity - space;
+
+                // Write room info to file
+                instanceFile << roomsVector[i].id << " ";
+                if (space > 0) {
+                    instanceFile << space << " " << 0;
+                }
+                else {
+                    space = abs(space);
+                    instanceFile << 0 << " " << space;
+                }
+                // Write entities in room
+                instanceFile << " " << entitiesInRoom.size();
+                for (int j = 0; j < (int) entitiesInRoom.size(); j++) {
+                    instanceFile << " " << entitiesInRoom[j];
+                }
+                instanceFile << '\n';
+                
+            }
 
             instanceFile.close();
         }
@@ -433,7 +466,6 @@ class OSAPInstance {
             }
             return usagePenalty + calcSoftPenalty(solution);
         }
-
 
         /* calcSoftPenalty() calculates the penalty associated to the violation of soft
         * constraints in the given solution.
